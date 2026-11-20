@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # Версия клиента Pilot-BIM в центре загрузок АСКОН, из которого берутся сборки для компиляции (lib/README.md)
+  PILOT_CLIENT_VERSION: 26.13.0.62219
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: 10.0.x
+
+      # Шесть сборок клиента Pilot не хранятся в репозитории: скачиваются из дистрибутива один раз на версию
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: lib/pilot
+          key: pilot-client-${{ env.PILOT_CLIENT_VERSION }}
+
+      - name: Pilot client assemblies
+        shell: pwsh
+        run: ./tools/get-pilot-client.ps1 -Version $env:PILOT_CLIENT_VERSION
+
+      - name: Pilot.ClientSdk package
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./tools/get-clientsdk.ps1
+
+      - name: Build
+        run: dotnet build Reports.sln -c Release -p:RestoreConfigFile=nuget.local.config -p:CopyToPilot=false --nologo
+
+      # Интеграционный тест со службой статистики без REPORTS_IT_URL пропускается
+      - name: Test
+        run: dotnet test Reports.sln -c Release --no-build --nologo

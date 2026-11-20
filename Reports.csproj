@@ -1,0 +1,101 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- Основные настройки сборки -->
+	<PropertyGroup>
+		<TargetFramework>net48</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<LangVersion>latest</LangVersion>
+		<Nullable>disable</Nullable>
+		<Version>1.5.0</Version>
+		<AssemblyName>112Reports.ext2</AssemblyName>
+		<RootNamespace>Reports</RootNamespace>
+		<OutputType>Library</OutputType>
+		<PlatformTarget>AnyCPU</PlatformTarget>
+		<!-- Сборка на Linux-раннере GitLab -->
+		<EnableWindowsTargeting>true</EnableWindowsTargeting>
+		<!-- Версия модуля - только <Version>: AssemblyVersion/FileVersion генерирует SDK. Остальные атрибуты - в AssemblyInfo.cs. -->
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+		<GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+		<GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
+		<GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+		<GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+		<GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+		<GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+		<GenerateAssemblyTrademarkAttribute>false</GenerateAssemblyTrademarkAttribute>
+		<GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
+		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<NoWarn>$(NoWarn);CS1591</NoWarn>
+		<!-- Сборки клиента Pilot (PilotClient.props) собраны под свою версию SDK; предупреждение о несовпадении не критично -->
+		<MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
+		<DebugType>full</DebugType>
+		<StartAction>Program</StartAction>
+		<StartProgram>C:\Program Files\ASCON\Pilot-BIM\Ascon.Pilot.PilotBIM.exe</StartProgram>
+	</PropertyGroup>
+
+	<!--
+		Pilot SDK берётся из NuGet. Типы отчётов (ReportContext, RObject, QueryBuilder, ObjectFields...)
+		в SDK нет - они живут в сборках клиента Pilot. Для компиляции берутся из установленного клиента,
+		PILOT_CLIENT_DIR или lib/pilot (PilotClient.props, lib/README.md), в поставку модуля не попадают: в клиенте они уже загружены.
+	-->
+	<ItemGroup>
+		<PackageReference Include="Ascon.Pilot.SDK" Version="26.13.0">
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</PackageReference>
+	</ItemGroup>
+
+	<!-- Pilot.ClientSdk: NuGet-пакет из реестра GitLab (nuget.config). Только для компиляции - в zip не попадает, в клиенте уже загружен -->
+	<ItemGroup>
+		<PackageReference Include="Pilot.ClientSdk" Version="2.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="System.ComponentModel.Composition" />
+		<Reference Include="System.Net.Http" />
+		<Reference Include="System.Runtime.Serialization" />
+		<Reference Include="System.Security" />
+	</ItemGroup>
+
+	<!-- Каталог сборок клиента (PilotClientDir) и ссылки на них - в PilotClient.props -->
+	<Import Project="$(MSBuildProjectDirectory)\PilotClient.props" />
+
+	<ItemGroup>
+		<None Update="Reports.config.json" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Remove="tests\**" />
+		<None Remove="tests\**" />
+	</ItemGroup>
+
+	<!-- Release: архив для загрузки модуля на сервер Pilot (без pdb/xml и без сборок, которые уже есть в клиенте) -->
+	<Target Name="CreateReleaseZip" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+		<PropertyGroup>
+			<_ZipStage>$(MSBuildProjectDirectory)\obj\zip-stage\</_ZipStage>
+			<_ZipPath>$(MSBuildProjectDirectory)\bin\$(AssemblyName)-$(Version).zip</_ZipPath>
+		</PropertyGroup>
+		<ItemGroup>
+			<_ZipFiles Include="$(TargetDir)$(AssemblyName).dll;$(TargetDir)Reports.config.json" />
+		</ItemGroup>
+		<RemoveDir Directories="$(_ZipStage)" />
+		<Copy SourceFiles="@(_ZipFiles)" DestinationFolder="$(_ZipStage)" />
+		<Delete Files="$(_ZipPath)" />
+		<ZipDirectory SourceDirectory="$(_ZipStage)" DestinationFile="$(_ZipPath)" />
+		<Message Importance="high" Text="Модуль для загрузки в Pilot: $(_ZipPath)" />
+	</Target>
+
+	<!-- Debug: копия в папку разработки клиента, Pilot-BIM подхватит модуль без загрузки на сервер -->
+	<PropertyGroup>
+		<DevExtensionDir>$(LocalAppData)\ASCON\Pilot-BIM\Development\$(AssemblyName)</DevExtensionDir>
+	</PropertyGroup>
+	<Target Name="CopyToDevelopmentDirectory" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug' AND '$(OS)' == 'Windows_NT' AND '$(CopyToPilot)' != 'false'">
+		<ItemGroup>
+			<_DevFiles Include="$(TargetDir)$(AssemblyName).*;$(TargetDir)Reports.config.json" />
+		</ItemGroup>
+		<Copy SourceFiles="@(_DevFiles)" DestinationFolder="$(DevExtensionDir)" />
+	</Target>
+
+</Project>

@@ -1,0 +1,10 @@
+{
+  "statsEnabled": true,
+  "statsUrl": "",
+  "apiKey": "",
+  "reportsGitLabGroupUrl": "",
+  "publishOnSave": true,
+  "gitLabOAuthClientId": "",
+  "gitLabOAuthRedirectUri": "http://127.0.0.1:7890/callback",
+  "useGitCredentials": true
+}

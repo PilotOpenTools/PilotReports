@@ -1,0 +1,13 @@
+bin/
+obj/
+.vs/
+*.user
+tests/**/bin/
+tests/**/obj/
+TestResults/
+__pycache__/
+nuget.local.config
+# сборки клиента Pilot (проприетарные): см. lib/README.md
+lib/pilot/*.dll
+lib/pilot/VERSION.txt
+local-pkg/

@@ -1,0 +1,22 @@
+<Window x:Class="Reports.Publishing.TokenWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:ClassModifier="internal"
+        Title="Токен GitLab"
+        Width="520"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="16">
+        <TextBlock TextWrapping="Wrap">
+            Personal Access Token GitLab со scope <Bold>api</Bold>:
+            GitLab / аватар / Edit profile / Access Tokens / Add new token.
+            Токен хранится на этом компьютере в зашифрованном виде (только для вашей учётной записи Windows).
+        </TextBlock>
+        <PasswordBox x:Name="TokenBox" Margin="0,10,0,0" />
+        <StackPanel Margin="0,14,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Padding="12,4" Margin="0,0,8,0" Content="Отмена" IsCancel="True" />
+            <Button Padding="12,4" Content="Сохранить" IsDefault="True" Click="OnSave" />
+        </StackPanel>
+    </StackPanel>
+</Window>
