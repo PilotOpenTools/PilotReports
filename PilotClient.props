@@ -1,0 +1,33 @@
+<Project>
+
+	<!--
+		Сборки клиента Pilot для компиляции (типы отчётов ReportContext, RObject, QueryBuilder... в NuGet-пакете SDK нет).
+		Подключается в Reports.csproj и tests/Reports.Tests; в репозитории самих dll нет - они проприетарные (АСКОН).
+		Каталог PilotClientDir выбирается по порядку:
+		  1. переменная окружения PILOT_CLIENT_DIR (или -p:PilotClientDir=...) - приоритет, дальше проверок нет;
+		  2. lib/pilot проекта, если там лежит Ascon.Pilot.Pilot.dll (копию кладёт разработчик или CI из пакета реестра GitLab);
+		  3. установленный клиент C:\Program Files\ASCON\Pilot-BIM.
+	-->
+	<PropertyGroup>
+		<PilotClientDir Condition="'$(PilotClientDir)' == ''">$(PILOT_CLIENT_DIR)</PilotClientDir>
+		<PilotClientDir Condition="'$(PilotClientDir)' == '' And Exists('$(MSBuildThisFileDirectory)lib/pilot/Ascon.Pilot.Pilot.dll')">$(MSBuildThisFileDirectory)lib/pilot</PilotClientDir>
+		<PilotClientDir Condition="'$(PilotClientDir)' == ''">C:\Program Files\ASCON\Pilot-BIM</PilotClientDir>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PilotClientReference Include="Ascon.Pilot.Pilot;Ascon.Pilot.ClientCore;Ascon.Pilot.Common;Ascon.Pilot.DataClasses;Ascon.Pilot.Core;Ascon.Pilot.ProjectionsRepository" />
+		<Reference Include="@(PilotClientReference)">
+			<HintPath>$(PilotClientDir)/%(Identity).dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+	</ItemGroup>
+
+	<Target Name="CheckPilotClientDir" BeforeTargets="ResolveAssemblyReferences">
+		<ItemGroup>
+			<_PilotClientMissing Include="@(PilotClientReference)" Condition="!Exists('$(PilotClientDir)/%(Identity).dll')" />
+		</ItemGroup>
+		<Error Condition="'@(_PilotClientMissing)' != ''"
+		       Text="Нет сборок клиента Pilot ($(PilotClientDir)): @(_PilotClientMissing->'%(Identity).dll', ', '). Установите клиент Pilot-BIM (C:\Program Files\ASCON\Pilot-BIM), либо укажите каталог с его сборками в переменной окружения PILOT_CLIENT_DIR, либо положите шесть dll в lib/pilot (в CI они приходят из пакета pilot-client реестра GitLab). См. lib/README.md." />
+	</Target>
+
+</Project>

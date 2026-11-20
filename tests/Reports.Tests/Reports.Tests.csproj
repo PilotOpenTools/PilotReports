@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <!-- xunit.v3: тестовый проект - исполняемый -->
+    <OutputType>Exe</OutputType>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.2" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Ascon.Pilot.SDK" Version="26.13.0" />
+  </ItemGroup>
+
+  <!-- Типы отчётов (RObject, ReportException) нужны тестам при компиляции: каталог и ссылки - в общем PilotClient.props -->
+  <Import Project="$(MSBuildProjectDirectory)\..\..\PilotClient.props" />
+
+  <!-- Сборки клиента Pilot нужны тестам в рантайме (в модуле они Private=false) -->
+  <ItemGroup>
+    <None Include="@(PilotClientReference->'$(PilotClientDir)/%(Identity).dll')" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Net.Http" />
+    <!-- Без AdditionalProperties: иначе при сборке решения модуль собирается второй раз с другими свойствами
+         в тот же obj параллельно, и компиляция разметки WPF падает (MC1000, CS2001). -->
+    <ProjectReference Include="..\..\Reports.csproj" />
+  </ItemGroup>
+
+</Project>

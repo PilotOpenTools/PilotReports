@@ -1,0 +1,65 @@
+<Window x:Class="Reports.Publishing.PublishWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:ClassModifier="internal"
+        Title="Сохранение отчёта - отправка в GitLab"
+        Width="760"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </Window.Resources>
+    <StackPanel Margin="16">
+        <TextBlock FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" Text="{Binding ReportName, StringFormat=Отчёт: {0}}" />
+        <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Foreground="#555" Text="{Binding RepoInfo}" />
+        <TextBlock Margin="0,2,0,0">
+            <Hyperlink Command="{Binding OpenRepoCommand}">Открыть репозиторий в GitLab</Hyperlink>
+        </TextBlock>
+        <Button HorizontalAlignment="Left" Margin="0,6,0,0" Padding="10,3" FontWeight="SemiBold" Content="Создать репозиторий…"
+                Command="{Binding CreateRepoCommand}" Visibility="{Binding RepoMissing, Converter={StaticResource BoolToVisibility}}"
+                ToolTip="Выбрать папку (подгруппу) в GitLab и создать репозиторий отчёта" />
+        <DockPanel Margin="0,8,0,0" LastChildFill="True">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Padding="8,2" Margin="8,0,0,0" Content="Войти через браузер" Command="{Binding LoginBrowserCommand}"
+                        Visibility="{Binding BrowserLoginAvailable, Converter={StaticResource BoolToVisibility}}"
+                        ToolTip="OAuth: откроется GitLab в браузере, пароль в Pilot не вводится" />
+                <Button Padding="8,2" Margin="8,0,0,0" Content="Токен GitLab…" Command="{Binding SetTokenCommand}" />
+                <Button Padding="8,2" Margin="8,0,0,0" Content="Выйти" Command="{Binding LogoutCommand}"
+                        ToolTip="Удалить сохранённый токен этого пользователя с компьютера" />
+            </StackPanel>
+            <TextBlock VerticalAlignment="Center" Foreground="#555" TextTrimming="CharacterEllipsis" Text="{Binding Account}" />
+        </DockPanel>
+
+        <GroupBox Header="Куда отправить" Margin="0,12,0,0" Padding="8">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton GroupName="branch" Margin="0,0,24,0" IsChecked="{Binding IsDev}" Content="dev - тестовый сервер" />
+                    <RadioButton GroupName="branch" IsChecked="{Binding IsMain}" Content="hotfix прода (ветка от main)" />
+                </StackPanel>
+                <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Foreground="#666" FontSize="11" Text="{Binding BranchHint}" />
+            </StackPanel>
+        </GroupBox>
+
+        <TextBlock Margin="0,12,0,4" Text="Что изменилось (причина версии в Pilot, коммит и CHANGELOG.md; каждая строка - отдельный пункт):" />
+        <TextBox MinHeight="54" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                 Text="{Binding CommitMessage, UpdateSourceTrigger=PropertyChanged}" />
+
+        <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" Foreground="#b35c00" Text="{Binding Status}" />
+        <ProgressBar Height="4" Margin="0,6,0,0" IsIndeterminate="True" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+
+        <DockPanel Margin="0,14,0,0" LastChildFill="False">
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                <Button Padding="10,4" Margin="0,0,8,0" Content="История…" Command="{Binding HistoryCommand}" />
+                <Button Padding="10,4" Content="Сохранить в файл…" Command="{Binding SaveLocalCommand}" />
+            </StackPanel>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Padding="10,4" Margin="0,0,8,0" Content="Отменить сохранение" Command="{Binding CancelCommand}"
+                        ToolTip="Отчёт не будет сохранён в Pilot" />
+                <Button Padding="10,4" Margin="0,0,8,0" Content="Только в Pilot" Command="{Binding SaveOnlyCommand}"
+                        ToolTip="Сохранить в Pilot (с причиной из «Что изменилось»), в GitLab не отправлять" />
+                <Button Padding="12,4" FontWeight="SemiBold" IsDefault="True" Content="Сохранить и отправить" Command="{Binding SendCommand}" />
+            </StackPanel>
+        </DockPanel>
+    </StackPanel>
+</Window>
