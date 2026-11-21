@@ -36,7 +36,7 @@
 | `SHA256SUMS.txt` | контрольные суммы |
 
 1. Загрузите на сервер и назначьте пользователям [`113Pilot.ClientSdk.ext2`](https://github.com/PilotOpenTools/PilotClientSdk/releases/latest), затем `112Reports.ext2`.
-2. Впишите в `Reports.config.json` рядом с dll адрес сервиса статистики (`statsUrl`), группу GitLab с отчётами (`reportsGitLabGroupUrl`) и OAuth-приложение GitLab (`gitLabOAuthClientId`). Пока адрес пуст, соответствующая функция выключена. Подробно: [руководство, раздел 5.2](docs/guide.md#52-настройка) и [раздел 6](docs/guide.md#6-отправка-отчётов-в-gitlab-cicd).
+2. В клиенте Pilot под администратором откройте Сервис / Настройки / Общие настройки. В разделе «PilotOpenTools отчёты (GitLab)» укажите сервер и группу GitLab с отчётами и OAuth-приложение, в разделе «PilotOpenTools отправка статистики» - адрес сервиса статистики. Те же значения можно вписать в `Reports.config.json` рядом с dll (`reportsGitLabGroupUrl`, `gitLabOAuthClientId`, `statsUrl`). Пока адрес пуст, соответствующая функция выключена. Подробно: [руководство, раздел 5.2](docs/guide.md#52-настройка) и [раздел 6](docs/guide.md#6-отправка-отчётов-в-gitlab-cicd).
 3. Если на сервере есть `043SendReportToGitlab.ext2`, снимите его: этот модуль его заменяет.
 
 ## Быстрый старт

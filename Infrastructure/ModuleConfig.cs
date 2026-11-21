@@ -8,7 +8,8 @@ namespace Reports.Infrastructure
 {
     /// <summary>
     /// Настройки модуля. Читаются из Reports.config.json рядом с dll модуля.
-    /// Статистику (включена ли, адрес, ключ) переопределяют общие настройки Pilot, раздел «Модули» (<see cref="ApplyCommon"/>).
+    /// Статистику (включена ли, адрес, ключ) переопределяют общие настройки Pilot, раздел «Модули» (<see cref="ApplyCommon"/>),
+    /// GitLab (сервер, группа, OAuth, окно при сохранении) - раздел «PilotOpenTools отчёты (GitLab)» (<see cref="ApplyGitLab"/>).
     /// Важнее всего адрес из переменной окружения REPORTS_STATS_URL (удобно на машине разработчика).
     /// </summary>
     [DataContract]
@@ -59,6 +60,9 @@ namespace Reports.Infrastructure
         private bool _fileStatsEnabled;
         private string _fileStatsUrl;
         private string _fileApiKey;
+
+        // GitLab из файла: к нему настройки возвращаются, когда раздел «PilotOpenTools отчёты (GitLab)» очищен.
+        private GitLabSettings _fileGitLab;
 
         private static ModuleConfig _current;
 
@@ -121,6 +125,45 @@ namespace Reports.Infrastructure
             StatsUrl = url;
             ApiKey = apiKey;
             ApplyEnvironment();
+        }
+
+        /// <summary>Настройки GitLab из файла Reports.config.json - редактор показывает их, пока раздел не заполнен.</summary>
+        internal GitLabSettings FileGitLab => _fileGitLab ?? GitLabSettings.FromConfig(this);
+
+        /// <summary>
+        /// Применяет раздел «PilotOpenTools отчёты (GitLab)» общих настроек Pilot: сервер и группа GitLab, OAuth, окно при сохранении.
+        /// Пустое значение возвращает настройки из файла, неразборчивое или неверное оставляет прежние.
+        /// </summary>
+        public void ApplyGitLab(string json)
+        {
+            if (_fileGitLab == null)
+                _fileGitLab = GitLabSettings.FromConfig(this);
+
+            var settings = _fileGitLab;
+            if (!string.IsNullOrWhiteSpace(json))
+            {
+                try
+                {
+                    settings = GitLabSettings.Parse(json);
+                }
+                catch (Exception ex)
+                {
+                    ModuleLog.Error("Общие настройки «PilotOpenTools отчёты (GitLab)» не разобраны - действуют прежние", ex);
+                    return;
+                }
+                var error = settings.Validate();
+                if (error != null)
+                {
+                    ModuleLog.Warn("Общие настройки «PilotOpenTools отчёты (GitLab)»: " + error + " Действуют прежние.");
+                    return;
+                }
+            }
+
+            ReportsGitLabGroupUrl = settings.GroupUrl;
+            PublishOnSave = settings.PublishOnSave;
+            GitLabOAuthClientId = string.IsNullOrWhiteSpace(settings.GitLabOAuthClientId) ? null : settings.GitLabOAuthClientId.Trim();
+            GitLabOAuthRedirectUri = string.IsNullOrWhiteSpace(settings.GitLabOAuthRedirectUri) ? DefaultRedirectUri : settings.GitLabOAuthRedirectUri.Trim();
+            UseGitCredentials = settings.UseGitCredentials;
         }
 
         /// <summary>В общих настройках адрес статистики модулей; отчёты шлют на тот же сервис, другой метод API.</summary>

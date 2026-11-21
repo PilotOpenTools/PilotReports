@@ -159,7 +159,7 @@ namespace Reports.Publishing
         {
             if (!ReportPublishService.TryParseGroupUrl(_groupUrl, out var baseUrl, out var groupPath))
             {
-                RepoInfo = "В Reports.config.json не указана группа GitLab с отчётами (reportsGitLabGroupUrl).";
+                RepoInfo = "Не указаны сервер и группа GitLab с отчётами - их задаёт администратор в общих настройках «PilotOpenTools отчёты (GitLab)».";
                 return;
             }
 
