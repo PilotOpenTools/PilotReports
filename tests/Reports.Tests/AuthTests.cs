@@ -45,6 +45,26 @@ namespace Reports.Tests
                 GitLabTokenStore.Clear("user-a", host);
             }
             Assert.Null(GitLabTokenStore.Load("user-a", host, useGitCredentials: false));
+            File.Delete(GitLabTokenStore.PathFor("user-a", host));
+        }
+
+        [Fact]
+        public void LogoutStopsGitCredentialsUntilNextLogin()
+        {
+            var host = "http://test-" + Guid.NewGuid().ToString("N") + ":8080";
+            try
+            {
+                GitLabTokenStore.Clear("user-a", host);
+                // Отметка «вышел» важнее менеджера учётных данных git: иначе «Выйти» снова подставляло бы тот же пароль.
+                Assert.Null(GitLabTokenStore.Load("user-a", host, useGitCredentials: true));
+
+                GitLabTokenStore.Save("user-a", host, new StoredToken { Kind = StoredToken.Pat, AccessToken = "glpat-new" });
+                Assert.Equal("glpat-new", GitLabTokenStore.Load("user-a", host, useGitCredentials: true).AccessToken);
+            }
+            finally
+            {
+                File.Delete(GitLabTokenStore.PathFor("user-a", host));
+            }
         }
 
         [Fact]
