@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -31,12 +33,35 @@ namespace Reports.Pilot
         private readonly TextBox _redirectUri = new TextBox();
         private readonly CheckBox _gitCredentials = new CheckBox { Content = "Брать токен из менеджера учётных данных git, если пользователь не вошёл в GitLab из Pilot" };
         private readonly TextBlock _status = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 0) };
+        private readonly TextBox _peopleFilter = new TextBox();
+        private readonly StackPanel _peopleList = new StackPanel();
+        private readonly TextBlock _peopleCount = new TextBlock { Foreground = Gray, Margin = new Thickness(0, 4, 0, 0) };
+        private readonly List<PersonItem> _people;
+        private readonly HashSet<int> _menuPersons = new HashSet<int>();
         private bool _loading;
 
-        public GitLabSettingsEditor(ISettingValueProvider provider, GitLabSettings file)
+        /// <summary>Человек в списке «кому показывать PilotReport».</summary>
+        internal sealed class PersonItem
+        {
+            public PersonItem(int id, string name, string login, bool isAdmin)
+            {
+                Id = id;
+                Name = name;
+                Login = login;
+                IsAdmin = isAdmin;
+            }
+
+            public int Id { get; }
+            public string Name { get; }
+            public string Login { get; }
+            public bool IsAdmin { get; }
+        }
+
+        public GitLabSettingsEditor(ISettingValueProvider provider, GitLabSettings file, List<PersonItem> people)
         {
             _provider = provider;
             _file = file ?? new GitLabSettings();
+            _people = people ?? new List<PersonItem>();
 
             var root = new StackPanel { Margin = new Thickness(4) };
             root.Children.Add(Group("GitLab с отчётами",
@@ -52,6 +77,17 @@ namespace Reports.Pilot
                 Label("Redirect URI приложения (локальный адрес):"),
                 _redirectUri,
                 Spaced(_gitCredentials)));
+            root.Children.Add(Group("Кнопка PilotReport в главном меню",
+                new TextBlock
+                {
+                    TextWrapping = TextWrapping.Wrap,
+                    Text = "Кому показывать: отметьте людей. Администраторы Pilot видят кнопку всегда. " +
+                           "Изменение у пользователя видно после перезапуска клиента.",
+                },
+                Label("Поиск по имени или логину:"),
+                _peopleFilter,
+                new ScrollViewer { Content = _peopleList, Height = 220, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new Thickness(0, 4, 0, 0) },
+                _peopleCount));
             var reset = new Button { Content = "Очистить раздел (действуют настройки из файла " + ModuleConfig.FileName + ")", HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(0, 6, 0, 0) };
             reset.Click += (s, e) => Reset();
             root.Children.Add(reset);
@@ -76,6 +112,43 @@ namespace Reports.Pilot
             }
             foreach (var text in new[] { _server, _group, _clientId, _redirectUri })
                 text.TextChanged += (s, e) => Save();
+            _peopleFilter.TextChanged += (s, e) => FillPeople();
+        }
+
+        /// <summary>Список людей с галочками (по фильтру). Отмеченные - вверху, администраторы помечены.</summary>
+        private void FillPeople()
+        {
+            _peopleList.Children.Clear();
+            var q = _peopleFilter.Text?.Trim();
+            var shown = _people
+                .Where(p => string.IsNullOrEmpty(q) ||
+                            (p.Name?.IndexOf(q, StringComparison.CurrentCultureIgnoreCase) ?? -1) >= 0 ||
+                            (p.Login?.IndexOf(q, StringComparison.CurrentCultureIgnoreCase) ?? -1) >= 0)
+                .OrderByDescending(p => _menuPersons.Contains(p.Id) || p.IsAdmin)
+                .ThenBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase);
+            foreach (var person in shown)
+            {
+                var box = new CheckBox
+                {
+                    Content = person.Name + (string.IsNullOrEmpty(person.Login) || person.Login == person.Name ? "" : $" ({person.Login})") +
+                              (person.IsAdmin ? " - администратор, видит всегда" : ""),
+                    IsChecked = person.IsAdmin || _menuPersons.Contains(person.Id),
+                    IsEnabled = !person.IsAdmin,
+                    Margin = new Thickness(0, 1, 0, 1),
+                };
+                var id = person.Id;
+                box.Checked += (s, e) => { _menuPersons.Add(id); UpdatePeopleCount(); Save(); };
+                box.Unchecked += (s, e) => { _menuPersons.Remove(id); UpdatePeopleCount(); Save(); };
+                _peopleList.Children.Add(box);
+            }
+            UpdatePeopleCount();
+        }
+
+        private void UpdatePeopleCount()
+        {
+            var admins = _people.Count(p => p.IsAdmin);
+            _peopleCount.Text = $"Отмечено: {_menuPersons.Count}, администраторов: {admins}" +
+                                (_people.Count == 0 ? ". Список людей не получен из Pilot." : "");
         }
 
         /// <summary>Проверка значения настройки: null - значение подходит, иначе текст ошибки.</summary>
@@ -113,6 +186,10 @@ namespace Reports.Pilot
                 _clientId.Text = settings.GitLabOAuthClientId ?? "";
                 _redirectUri.Text = settings.GitLabOAuthRedirectUri ?? ModuleConfig.DefaultRedirectUri;
                 _gitCredentials.IsChecked = settings.UseGitCredentials;
+                _menuPersons.Clear();
+                foreach (var id in settings.MenuPersonIds ?? Array.Empty<int>())
+                    _menuPersons.Add(id);
+                FillPeople();
             }
             finally
             {
@@ -133,6 +210,7 @@ namespace Reports.Pilot
                 GitLabOAuthClientId = Trimmed(_clientId.Text),
                 GitLabOAuthRedirectUri = Trimmed(_redirectUri.Text) ?? ModuleConfig.DefaultRedirectUri,
                 UseGitCredentials = _gitCredentials.IsChecked == true,
+                MenuPersonIds = _menuPersons.Count == 0 ? null : _menuPersons.OrderBy(i => i).ToArray(),
             };
 
             var error = settings.Validate();

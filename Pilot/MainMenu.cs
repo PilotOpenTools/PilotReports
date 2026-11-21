@@ -10,13 +10,17 @@ using Reports.Manager;
 namespace Reports.Pilot
 {
     /// <summary>
-    /// Пункт «Загрузить отчёт» в главном меню Pilot (рядом с «Сервис»): окно с деревом отчётов,
-    /// загрузкой .repx с диска и сравнением/обновлением из веток GitLab.
+    /// Меню «PilotReport» в главном меню Pilot (рядом с «Сервис»), выпадающее, как у других модулей:
+    /// пункт открывает окно с деревом отчётов, загрузкой .repx с диска, сравнением/обновлением из веток GitLab
+    /// и отправкой в dev или main. Видят его администраторы Pilot и люди, выбранные в общих настройках
+    /// «PilotOpenTools отчёты (GitLab)».
     /// </summary>
     [Export(typeof(IMenu<MainViewContext>))]
     public sealed class MainMenu : IMenu<MainViewContext>
     {
-        private const string LoadReportItem = "Reports_LoadReport";
+        private const string RootItem = "Reports_PilotReport";
+        private const string OpenItem = "Reports_LoadReport";
+        public const string Title = "PilotReport";
 
         private readonly IObjectsRepository _repository;
         private ReportManagerWindow _window;
@@ -29,16 +33,25 @@ namespace Reports.Pilot
 
         public void Build(IMenuBuilder builder, MainViewContext context)
         {
-            if (!builder.ItemNames.Contains(LoadReportItem))
-                builder.AddItem(LoadReportItem, builder.Count).WithHeader("Загрузить отчёт");
+            if (builder.ItemNames.Contains(RootItem) || !Allowed())
+                return;
+            var submenu = builder.AddItem(RootItem, builder.Count).WithHeader(Title).WithSubmenu();
+            submenu.AddItem(OpenItem, 0).WithHeader("Отчёты: загрузка, сравнение, отправка в GitLab…");
         }
 
         public void OnMenuItemClick(string name, MainViewContext context)
         {
-            if (name != LoadReportItem)
+            if (name != OpenItem)
                 return;
             try
             {
+                if (!Allowed())
+                {
+                    MessageBox.Show("PilotReport доступен администраторам Pilot и людям, выбранным в общих настройках " +
+                                    $"«{GitLabCommonSettings.SectionTitle}».", Title, MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
                 // Одно окно на клиент: повторный щелчок возвращает к уже открытому.
                 if (_window != null)
                 {
@@ -57,8 +70,23 @@ namespace Reports.Pilot
             }
             catch (Exception ex)
             {
-                ModuleLog.Error("Окно «Загрузить отчёт»", ex);
-                MessageBox.Show(ex.Message, "Reports", MessageBoxButton.OK, MessageBoxImage.Error);
+                ModuleLog.Error("Окно PilotReport", ex);
+                MessageBox.Show(ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>Администратор Pilot или выбран в общих настройках.</summary>
+        private bool Allowed()
+        {
+            try
+            {
+                var person = _repository.GetCurrentPerson();
+                return person != null && ModuleConfig.Current.MenuAllowed(person.Id, person.IsAdmin);
+            }
+            catch (Exception ex)
+            {
+                ModuleLog.Warn("PilotReport: не удалось проверить, кому показывать меню: " + ex.Message);
+                return false;
             }
         }
 

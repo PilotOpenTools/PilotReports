@@ -33,6 +33,10 @@ namespace Reports.Infrastructure
         [DataMember(Name = "useGitCredentials")]
         public bool UseGitCredentials { get; set; } = true;
 
+        /// <summary>Кому показывать PilotReport в главном меню (Id людей Pilot). Администраторы Pilot видят его всегда.</summary>
+        [DataMember(Name = "menuPersonIds")]
+        public int[] MenuPersonIds { get; set; }
+
         /// <summary>Адрес группы для API: сервер + группа; null - сервер или группа не заданы.</summary>
         public string GroupUrl => Combine(GitLabUrl, Group);
 
@@ -52,6 +56,7 @@ namespace Reports.Infrastructure
                 GitLabOAuthClientId = config.GitLabOAuthClientId,
                 GitLabOAuthRedirectUri = config.GitLabOAuthRedirectUri,
                 UseGitCredentials = config.UseGitCredentials,
+                MenuPersonIds = config.MenuPersonIds,
             };
             if (Publishing.ReportPublishService.TryParseGroupUrl(config.ReportsGitLabGroupUrl, out var baseUrl, out var group))
             {

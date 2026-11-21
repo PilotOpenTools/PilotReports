@@ -7,7 +7,7 @@ using Ascon.Pilot.SDK;
 
 namespace Reports.Manager
 {
-    /// <summary>Узел дерева «Загрузить отчёт»: папка отчётов или отчёт.</summary>
+    /// <summary>Узел дерева окна PilotReport: папка отчётов или отчёт.</summary>
     internal sealed class ReportNode
     {
         public ReportNode(IDataObject obj, bool isFolder)
