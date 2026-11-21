@@ -30,7 +30,7 @@ namespace Reports.Publishing
             if (BaseUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !_warnedHttp)
             {
                 _warnedHttp = true;
-                ModuleLog.Warn($"GitLab {BaseUrl} работает по http: токен передаётся по сети без шифрования. Включите https и поменяйте адрес в reportsGitLabGroupUrl.");
+                ModuleLog.Warn($"GitLab {BaseUrl} работает по http: токен передаётся по сети без шифрования. Включите https и поменяйте адрес сервера в общих настройках «PilotOpenTools отчёты (GitLab)».");
             }
         }
 

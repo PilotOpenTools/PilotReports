@@ -88,7 +88,7 @@ jobs:
           $notes += ''
           $notes += '### Установка'
           $notes += ''
-          $notes += "Загрузите ``112Reports.ext2-$env:VERSION.zip`` на сервер Pilot и назначьте пользователям вместе с ``113Pilot.ClientSdk.ext2`` ([PilotClientSdk](https://github.com/PilotOpenTools/PilotClientSdk/releases/latest)). Адреса статистики и GitLab задаются в ``Reports.config.json`` рядом с dll, подробнее: [руководство](https://github.com/PilotOpenTools/PilotReports/blob/main/docs/guide.md)."
+          $notes += "Загрузите ``112Reports.ext2-$env:VERSION.zip`` на сервер Pilot и назначьте пользователям вместе с ``113Pilot.ClientSdk.ext2`` ([PilotClientSdk](https://github.com/PilotOpenTools/PilotClientSdk/releases/latest)). Адреса статистики и GitLab задаются в общих настройках Pilot (разделы «PilotOpenTools отправка статистики» и «PilotOpenTools отчёты (GitLab)») или в ``Reports.config.json`` рядом с dll, подробнее: [руководство](https://github.com/PilotOpenTools/PilotReports/blob/main/docs/guide.md)."
           $notes | Set-Content -LiteralPath release-notes.md -Encoding UTF8
 
       - name: Publish GitHub Release

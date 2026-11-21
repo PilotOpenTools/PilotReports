@@ -25,6 +25,7 @@ namespace Reports.Pilot
         private readonly ITabServiceProvider _tabs;
         private readonly IClientInfo _clientInfo;
         private readonly IDisposable _settingsSubscription;
+        private readonly IDisposable _gitLabSubscription;
 
         [ImportingConstructor]
         public ModuleStartup(
@@ -46,6 +47,8 @@ namespace Reports.Pilot
             _clientInfo = clientInfo;
             // Адрес статистики задаёт администратор в общих настройках: подписка живёт весь сеанс клиента.
             _settingsSubscription = CommonStatsSettings.Subscribe(personalSettings, ModuleConfig.Current);
+            // Сервер и группу GitLab - тоже: раздел «PilotOpenTools отчёты (GitLab)».
+            _gitLabSubscription = GitLabCommonSettings.Subscribe(personalSettings, ModuleConfig.Current);
             // Исключение из Initialize не пробрасывается (клиент запустится), а попадает в окно загрузки и в Grafana.
             StartupRunner.Run(this);
         }

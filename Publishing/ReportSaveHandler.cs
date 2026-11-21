@@ -14,7 +14,8 @@ namespace Reports.Publishing
     /// <summary>
     /// При сохранении отчёта (новая версия .repx) показывает окно отправки в GitLab.
     /// Перенесено из модуля 043SendReportToGitlab: ссылка GitLabLink в скрипте отчёта больше не нужна -
-    /// репозиторий ищется по имени отчёта в группе отчётов (reportsGitLabGroupUrl в Reports.config.json).
+    /// репозиторий ищется по имени отчёта в группе отчётов (общие настройки «PilotOpenTools отчёты (GitLab)»
+    /// или reportsGitLabGroupUrl в Reports.config.json).
     /// «Отменить сохранение» в окне отменяет изменение в Pilot.
     /// </summary>
     [Export(typeof(IObjectChangeProcessor))]
@@ -41,13 +42,18 @@ namespace Reports.Publishing
         internal static bool ShouldOfferPublish(ModuleConfig config) =>
             config.PublishOnSave && ReportPublishService.TryParseGroupUrl(config.ReportsGitLabGroupUrl, out _, out _);
 
+        private static string _skipLogged;
+
         public bool ProcessChanges(IEnumerable<DataObjectChange> changes, IObjectModifier modifier)
         {
             var config = ModuleConfig.Current;
-            if (!ShouldOfferPublish(config))
-                return true;
-
             var list = changes?.ToList() ?? new List<DataObjectChange>();
+            if (!ShouldOfferPublish(config))
+            {
+                LogSkipped(config, list);
+                return true;
+            }
+
             foreach (var change in list)
             {
                 try
@@ -113,6 +119,31 @@ namespace Reports.Publishing
             }
             return true;
         }
+
+        /// <summary>Почему окно не открылось - в лог, один раз на причину, и только когда сохранён отчёт.</summary>
+        private static void LogSkipped(ModuleConfig config, List<DataObjectChange> changes)
+        {
+            try
+            {
+                if (!changes.Any(c => c?.Old != null && c.New != null && PilotReports.IsReport(c.New) && IsNewSnapshot(c.Old, c.New)))
+                    return;
+                var reason = SkipReason(config);
+                if (reason == _skipLogged)
+                    return;
+                _skipLogged = reason;
+                ModuleLog.Info("Отчёт сохранён без окна отправки в GitLab: " + reason);
+            }
+            catch
+            {
+                // Лог не должен мешать сохранению отчёта.
+            }
+        }
+
+        internal static string SkipReason(ModuleConfig config) =>
+            !config.PublishOnSave
+                ? "окно при сохранении выключено (publishOnSave)"
+                : $"не указаны сервер и группа GitLab - заполните общие настройки «{(global::Reports.Pilot.GitLabCommonSettings.SectionTitle)}» " +
+                  $"или reportsGitLabGroupUrl в {ModuleConfig.FileName}";
 
         private static void SaveWithReason(Guid reportId, string fileName, byte[] content, string reason)
         {

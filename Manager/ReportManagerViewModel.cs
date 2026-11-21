@@ -281,7 +281,7 @@ namespace Reports.Manager
             _auth = null;
             if (!ReportPublishService.TryParseGroupUrl(_config.ReportsGitLabGroupUrl, out var baseUrl, out var groupPath))
             {
-                Account = "GitLab: в Reports.config.json не указана группа с отчётами (reportsGitLabGroupUrl).";
+                Account = "GitLab: не указаны сервер и группа с отчётами - их задаёт администратор в общих настройках «PilotOpenTools отчёты (GitLab)».";
                 OnPropertyChanged(nameof(BrowserLoginAvailable));
                 return;
             }
