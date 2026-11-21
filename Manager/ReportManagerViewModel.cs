@@ -25,8 +25,8 @@ namespace Reports.Manager
     }
 
     /// <summary>
-    /// Окно «Загрузить отчёт» (главное меню Pilot): дерево папок и отчётов, для выбранного отчёта -
-    /// загрузка .repx с диска и сравнение/обновление из веток GitLab main и dev.
+    /// Окно PilotReport (главное меню Pilot): дерево папок и отчётов, для выбранного отчёта -
+    /// загрузка .repx с диска, сравнение/обновление из веток GitLab main и dev и отправка текущей версии в dev или main (hotfix).
     /// Каждое обновление создаёт в Pilot новую версию отчёта с причиной.
     /// </summary>
     internal sealed class ReportManagerViewModel : INotifyPropertyChanged
@@ -64,6 +64,8 @@ namespace Reports.Manager
             UpdateMainCommand = new AsyncCommand(() => UpdateFromBranchAsync(Main, null), () => CanUseBranch(Main));
             CompareDevCommand = new AsyncCommand(() => CompareAsync(Dev), () => CanUseBranch(Dev));
             UpdateDevCommand = new AsyncCommand(() => UpdateFromBranchAsync(Dev, null), () => CanUseBranch(Dev));
+            SendMainCommand = new AsyncCommand(() => SendAsync(main: true), CanSend);
+            SendDevCommand = new AsyncCommand(() => SendAsync(main: false), CanSend);
             CreateRepoCommand = new AsyncCommand(CreateRepoAsync, () => !IsBusy && HasReport && RepoMissing);
             SaveLocalCommand = new AsyncCommand(() => { SaveLocal(); return Task.CompletedTask; }, () => !IsBusy && HasReport);
 
@@ -147,6 +149,8 @@ namespace Reports.Manager
         public ICommand UpdateDevCommand { get; }
         public ICommand SaveLocalCommand { get; }
         public ICommand CreateRepoCommand { get; }
+        public ICommand SendMainCommand { get; }
+        public ICommand SendDevCommand { get; }
 
         /// <summary>Вход выполнен, а репозитория выбранного отчёта нет - предлагается создать.</summary>
         public bool RepoMissing
@@ -365,6 +369,43 @@ namespace Reports.Manager
 
         private bool CanUseBranch(string branch) =>
             !IsBusy && HasReport && _repo != null && _repo.RepxPathByBranch.ContainsKey(branch);
+
+        /// <summary>Отправить можно, когда репозиторий найден: недостающая ветка создастся при отправке.</summary>
+        private bool CanSend() => !IsBusy && HasReport && _repo != null;
+
+        /// <summary>
+        /// Отправить текущую версию отчёта из Pilot в GitLab: окно отправки в режиме «только отправить»
+        /// (то же, что при сохранении, но в Pilot ничего не сохраняется). main - hotfix-ветка от main.
+        /// </summary>
+        private async Task SendAsync(bool main)
+        {
+            var node = _selected;
+            byte[] content = null;
+            await RunAsync(() =>
+            {
+                content = PilotReports.ReadCurrent(node.Object);
+                return Task.CompletedTask;
+            }, "Чтение отчёта из Pilot");
+            if (content == null)
+            {
+                Status ??= "В отчёте нет файла .repx - отправлять нечего.";
+                return;
+            }
+            content = ReportFile.TrimTail(content);
+
+            string pilotFolder = null;
+            try { pilotFolder = PilotApi.LoadObject(node.Object.ParentId, TimeSpan.FromSeconds(5))?.DisplayName; }
+            catch { /* подсказка папки необязательна */ }
+
+            var fileName = PilotReports.CurrentRepx(node.Object)?.Name ?? "report.repx";
+            var viewModel = new PublishViewModel(node.Title, fileName, content, _config, _pilotLogin,
+                pilotFolder: pilotFolder, publishOnly: true, main: main);
+            new PublishWindow(viewModel) { Owner = Owner?.Invoke() }.ShowDialog();
+
+            // После отправки ветки репозитория могли измениться (создана dev или hotfix) - перечитываем.
+            if (_selected == node)
+                await FindRepoAsync(_selectionVersion);
+        }
 
         // ------------------------------------------------------------------ пять кнопок
 
@@ -598,7 +639,7 @@ namespace Reports.Manager
             }
             catch (Exception ex)
             {
-                ModuleLog.Error($"{what}: окно «Загрузить отчёт»", ex);
+                ModuleLog.Error($"{what}: окно PilotReport", ex);
                 Status = $"{what}: {ex.Message}";
             }
             finally

@@ -49,7 +49,15 @@ namespace Reports.Infrastructure
         [DataMember(Name = "useGitCredentials")]
         public bool UseGitCredentials { get; set; } = true;
 
-        public const string DefaultRedirectUri = "http://127.0.0.1:7890/callback";
+        /// <summary>Кому показывать PilotReport в главном меню (Id людей Pilot); администраторы Pilot видят его всегда.</summary>
+        [DataMember(Name = "menuPersonIds")]
+        public int[] MenuPersonIds { get; set; }
+
+        /// <summary>Видит ли человек PilotReport в главном меню: администратор Pilot или выбран в общих настройках.</summary>
+        public bool MenuAllowed(int personId, bool isAdmin) =>
+            isAdmin || (MenuPersonIds != null && Array.IndexOf(MenuPersonIds, personId) >= 0);
+
+        public const string DefaultRedirectUri ="http://127.0.0.1:7890/callback";
 
         private const string EnvStatsUrl = "REPORTS_STATS_URL";
         private const string ModuleEventsPath = "/api/module-events";
@@ -164,6 +172,7 @@ namespace Reports.Infrastructure
             GitLabOAuthClientId = string.IsNullOrWhiteSpace(settings.GitLabOAuthClientId) ? null : settings.GitLabOAuthClientId.Trim();
             GitLabOAuthRedirectUri = string.IsNullOrWhiteSpace(settings.GitLabOAuthRedirectUri) ? DefaultRedirectUri : settings.GitLabOAuthRedirectUri.Trim();
             UseGitCredentials = settings.UseGitCredentials;
+            MenuPersonIds = settings.MenuPersonIds;
         }
 
         /// <summary>В общих настройках адрес статистики модулей; отчёты шлют на тот же сервис, другой метод API.</summary>

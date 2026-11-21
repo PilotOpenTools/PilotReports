@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Reports.Manager"
         x:ClassModifier="internal"
-        Title="Загрузить отчёт"
+        Title="PilotReport"
         Width="1180"
         Height="720"
         MinWidth="900"
@@ -101,6 +101,8 @@
                                         ToolTip="Что отличается в Pilot от ветки main (скрипт и разметка)" />
                                 <Button Style="{StaticResource ActionButton}" Content="Обновить из main…" Command="{Binding UpdateMainCommand}"
                                         ToolTip="Взять .repx из ветки main и создать новую версию отчёта в Pilot" />
+                                <Button Style="{StaticResource ActionButton}" FontWeight="SemiBold" Content="Отправить в main…" Command="{Binding SendMainCommand}"
+                                        ToolTip="Отправить текущую версию из Pilot как hotfix прода: ветка от main, на прод её выпускает веб-админка («Hotfix в прод»)" />
                             </WrapPanel>
                         </GroupBox>
                         <GroupBox Header="dev - тестовая версия" Margin="0,8,0,0" Padding="8,8,0,0">
@@ -109,6 +111,8 @@
                                         ToolTip="Что отличается в Pilot от ветки dev (скрипт и разметка)" />
                                 <Button Style="{StaticResource ActionButton}" Content="Обновить из dev…" Command="{Binding UpdateDevCommand}"
                                         ToolTip="Взять .repx из ветки dev и создать новую версию отчёта в Pilot" />
+                                <Button Style="{StaticResource ActionButton}" FontWeight="SemiBold" Content="Отправить в dev…" Command="{Binding SendDevCommand}"
+                                        ToolTip="Отправить текущую версию отчёта из Pilot в ветку dev (тестовый сервер)" />
                             </WrapPanel>
                         </GroupBox>
                     </StackPanel>

@@ -85,6 +85,22 @@ namespace Reports.Tests
         }
 
         [Fact]
+        public void PilotReport_menu_is_for_admins_and_selected_people()
+        {
+            var config = ModuleConfig.Parse("{}");
+            Assert.True(config.MenuAllowed(5, isAdmin: true));
+            Assert.False(config.MenuAllowed(5, isAdmin: false));
+
+            config.ApplyGitLab("{\"menuPersonIds\":[5,9]}");
+            Assert.True(config.MenuAllowed(5, isAdmin: false));
+            Assert.True(config.MenuAllowed(9, isAdmin: false));
+            Assert.False(config.MenuAllowed(7, isAdmin: false));
+
+            config.ApplyGitLab("");
+            Assert.False(config.MenuAllowed(5, isAdmin: false));
+        }
+
+        [Fact]
         public void Settings_round_trip_through_json()
         {
             var settings = new GitLabSettings { GitLabUrl = "https://gl", Group = "reports", PublishOnSave = false, UseGitCredentials = false };

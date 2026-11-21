@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Linq;
 using System.Windows;
 using Ascon.Pilot.SDK;
 using Reports.Infrastructure;
@@ -9,7 +10,7 @@ namespace Reports.Pilot
 {
     /// <summary>
     /// Раздел «PilotOpenTools отчёты (GitLab)» в общих настройках Pilot (Сервис / Настройки / Общие настройки):
-    /// сервер и группа GitLab с отчётами, OAuth-приложение, окно отправки при сохранении.
+    /// сервер и группа GitLab с отчётами, OAuth-приложение, окно отправки при сохранении и кому показывать PilotReport.
     /// Задаёт администратор; клиенты получают значение при запуске и при каждом изменении (без перезапуска).
     /// Пока раздел не заполнен, действуют настройки из Reports.config.json.
     /// </summary>
@@ -21,7 +22,14 @@ namespace Reports.Pilot
 
         public const string SectionTitle = "PilotOpenTools отчёты (GitLab)";
 
+        private readonly IObjectsRepository _repository;
         private ISettingValueProvider _valueProvider;
+
+        [ImportingConstructor]
+        public GitLabCommonSettings(IObjectsRepository repository)
+        {
+            _repository = repository;
+        }
 
         public string Key => SettingKey;
 
@@ -33,7 +41,7 @@ namespace Reports.Pilot
             {
                 try
                 {
-                    return new GitLabSettingsEditor(_valueProvider, ModuleConfig.Current.FileGitLab);
+                    return new GitLabSettingsEditor(_valueProvider, ModuleConfig.Current.FileGitLab, People());
                 }
                 catch (Exception ex)
                 {
@@ -42,6 +50,24 @@ namespace Reports.Pilot
                         MessageBoxButton.OK, MessageBoxImage.Error);
                     return null;
                 }
+            }
+        }
+
+        /// <summary>Люди базы для списка «кому показывать PilotReport» (без удалённых, по имени).</summary>
+        private List<GitLabSettingsEditor.PersonItem> People()
+        {
+            try
+            {
+                return _repository.GetPeople()
+                    .Where(p => p != null && !p.IsDeleted)
+                    .Select(p => new GitLabSettingsEditor.PersonItem(p.Id, string.IsNullOrWhiteSpace(p.DisplayName) ? p.Login : p.DisplayName, p.Login, p.IsAdmin))
+                    .OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                ModuleLog.Warn("Не удалось получить список людей Pilot для настроек PilotReport: " + ex.Message);
+                return new List<GitLabSettingsEditor.PersonItem>();
             }
         }
 

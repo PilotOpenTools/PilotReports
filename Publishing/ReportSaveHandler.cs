@@ -65,7 +65,7 @@ namespace Reports.Publishing
                     if (!IsNewSnapshot(change.Old, change.New))
                         continue;
 
-                    // Версию создало окно «Загрузить отчёт»: из GitLab - отправлять нечего, с диска - причина уже введена.
+                    // Версию создало окно PilotReport: из GitLab - отправлять нечего, с диска - причина уже введена.
                     var pending = PendingSaves.Take(change.New.Id);
                     if (pending != null && !pending.OfferPublish)
                         continue;

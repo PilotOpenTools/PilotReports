@@ -37,9 +37,11 @@ namespace Reports.Publishing
         private readonly string _pilotFolder;
 
         public PublishViewModel(string reportName, string fileName, byte[] content, ModuleConfig config, string pilotLogin,
-            string initialMessage = null, string pilotFolder = null)
+            string initialMessage = null, string pilotFolder = null, bool publishOnly = false, bool main = false)
         {
             _pilotFolder = pilotFolder;
+            PublishOnly = publishOnly;
+            _isMain = main;
             ReportName = reportName;
             _commitMessage = initialMessage;
             FileName = fileName;
@@ -62,6 +64,18 @@ namespace Reports.Publishing
 
         public string ReportName { get; }
         public string FileName { get; }
+
+        /// <summary>
+        /// Окно открыто из PilotReport для текущей версии отчёта, а не при сохранении в дизайнере:
+        /// в Pilot ничего не сохраняется, есть только «Отправить» и «Закрыть».
+        /// </summary>
+        public bool PublishOnly { get; }
+        public bool SaveMode => !PublishOnly;
+        public string WindowTitle => PublishOnly ? "Отправка отчёта в GitLab" : "Сохранение отчёта - отправка в GitLab";
+        public string SendText => PublishOnly ? "Отправить" : "Сохранить и отправить";
+        public string MessageLabel => PublishOnly
+            ? "Что изменилось (коммит и CHANGELOG.md; каждая строка - отдельный пункт):"
+            : "Что изменилось (причина версии в Pilot, коммит и CHANGELOG.md; каждая строка - отдельный пункт):";
 
         public bool IsDev
         {
