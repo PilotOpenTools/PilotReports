@@ -16,6 +16,8 @@ namespace Reports.Publishing
         public const string Pat = "pat";
         public const string OAuth = "oauth";
         public const string Git = "git";
+        /// <summary>Пользователь вышел (или GitLab отклонил токен): учётные данные git для этого сервера больше не подставляются.</summary>
+        public const string LoggedOut = "logout";
 
         [DataMember(Name = "kind")] public string Kind { get; set; }
         [DataMember(Name = "access")] public string AccessToken { get; set; }
@@ -49,6 +51,8 @@ namespace Reports.Publishing
         public static StoredToken Load(string pilotLogin, string baseUrl, bool useGitCredentials)
         {
             var saved = Read(PathFor(pilotLogin, baseUrl));
+            if (saved?.Kind == StoredToken.LoggedOut)
+                return null;
             if (saved != null && !string.IsNullOrEmpty(saved.AccessToken))
                 return saved;
 
@@ -66,9 +70,22 @@ namespace Reports.Publishing
             File.WriteAllBytes(PathFor(pilotLogin, baseUrl), data);
         }
 
+        /// <summary>
+        /// Выход: токен удаляется, вместо него пишется отметка «вышел». Без неё модуль сразу снова подставил бы
+        /// пароль из менеджера учётных данных git - и «Выйти» не меняло бы ничего, если GitLab этот пароль отклоняет.
+        /// Отметку снимает следующий вход (токеном или через браузер).
+        /// </summary>
         public static void Clear(string pilotLogin, string baseUrl)
         {
-            try { File.Delete(PathFor(pilotLogin, baseUrl)); } catch { /* файла нет */ }
+            try
+            {
+                Save(pilotLogin, baseUrl, new StoredToken { Kind = StoredToken.LoggedOut });
+            }
+            catch (Exception ex)
+            {
+                ModuleLog.Warn("Не удалось записать выход из GitLab", ex);
+                try { File.Delete(PathFor(pilotLogin, baseUrl)); } catch { /* файла нет */ }
+            }
         }
 
         /// <summary>Файл токена для пары «логин Pilot + сервер GitLab» (имя - хеш, чтобы не светить логин).</summary>

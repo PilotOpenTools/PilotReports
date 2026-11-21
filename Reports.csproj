@@ -6,7 +6,7 @@
 		<UseWPF>true</UseWPF>
 		<LangVersion>latest</LangVersion>
 		<Nullable>disable</Nullable>
-		<Version>1.6.0</Version>
+		<Version>1.6.1</Version>
 		<AssemblyName>112Reports.ext2</AssemblyName>
 		<RootNamespace>Reports</RootNamespace>
 		<OutputType>Library</OutputType>

@@ -184,6 +184,7 @@ namespace Reports.Publishing
                       $" · пользователь Pilot {_pilotLogin}";
 
             _service = new ReportPublishService(new GitLabApi(baseUrl, token.AccessToken), groupPath);
+            _tokenRejected = false;
             await RunAsync(async () =>
             {
                 _repo = await _service.FindAsync(ReportName);
@@ -196,7 +197,22 @@ namespace Reports.Publishing
                 }
                 ShowRepo();
             }, "Поиск репозитория");
+
+            if (_tokenRejected)
+            {
+                // GitLab не принял токен: вход сброшен (RunAsync), показываем, как войти заново.
+                _service = null;
+                Account = "GitLab: вход не выполнен";
+                RepoInfo = (token.Kind == StoredToken.Git
+                               ? "GitLab не принял пароль из менеджера учётных данных git (API GitLab принимает только токен). "
+                               : "GitLab не принял токен. ") +
+                           (BrowserLoginAvailable
+                               ? "Войдите: «Войти через браузер» или «Токен GitLab…»."
+                               : "Нажмите «Токен GitLab…» и вставьте Personal Access Token (scope api).");
+            }
         }
+
+        private bool _tokenRejected;
 
         private void ShowRepo()
         {
@@ -311,7 +327,7 @@ namespace Reports.Publishing
         private async Task LogoutAsync()
         {
             _auth?.Logout();
-            Status = "Вход в GitLab сброшен - токен удалён с этого компьютера.";
+            Status = "Вход в GitLab сброшен - токен удалён с этого компьютера, учётные данные git больше не подставляются.";
             await InitializeAsync();
         }
 
@@ -351,7 +367,10 @@ namespace Reports.Publishing
             {
                 Status = ex.Message;
                 if (ex.Status == 401)
+                {
                     _auth?.Logout();
+                    _tokenRejected = true;
+                }
             }
             catch (Exception ex)
             {
